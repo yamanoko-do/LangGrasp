@@ -1,0 +1,9 @@
+[submodule "langrasp/thirdpart/moge"]
+	path = langrasp/thirdpart/moge
+	url = https://github.com/microsoft/MoGe.git
+[submodule "langrasp/thirdpart/piper_sdk"]
+	path = langrasp/thirdpart/piper_sdk
+	url = https://github.com/agilexrobotics/piper_sdk.git
+[submodule "langrasp/thirdpart/graspnet"]
+	path = langrasp/thirdpart/graspnet
+	url = https://github.com/yamanoko-do/graspnet.git
