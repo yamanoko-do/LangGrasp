@@ -52,7 +52,18 @@ apt install iproute2
 ```
 
 # 使用
-1. 首先执行标定，手眼标定&&工具坐标系标定代码见[d435_test](https://github.com/yamanoko-do/d435_test.git)，将结果写入langrasp/config.py
-2. 查找can：bash ./scripts/find_all_can_port.sh
-3. 激活can：bash ./scripts/can_activate.sh can_piper 1000000 "3-1.1:1.0"
-4. 执行抓取：python main.py
+- 首先执行标定，手眼标定&&工具坐标系标定代码见[d435_test](https://github.com/yamanoko-do/d435_test.git)，将结果写入langrasp/config.py
+- 连接piper:
+
+```bash
+bash ./scripts/find_all_can_port.sh
+bash ./scripts/can_activate.sh can_piper 1000000 "3-1.1:1.0"
+```
+- 设置qwen2.5l的APIKEY:
+```bash
+export DASHSCOPE_API_KEY='YOUR_DASHSCOPE_API_KEY'
+```
+- 执行抓取:
+```bash
+python main.py
+```

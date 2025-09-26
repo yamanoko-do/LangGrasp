@@ -12,7 +12,7 @@ import numpy as np
 
 from openai import OpenAI
 client = OpenAI(
-    api_key="sk-73fe202ace944ca6864986ef41dbc72d",
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
 def image_to_base64(image):
@@ -133,7 +133,8 @@ def get_prediction_result_qwen(image, sammodel, scene_id, obj_id, text):
             ]
 
             # 使用 points 提示SAM
-            results = sammodel(image, device=0, retina_masks=True, conf=0.72, iou = 0.8,points=adjusted_points, labels=[1]*len(points))
+            #results = sammodel(image, device=0, retina_masks=True, conf=0.72, iou = 0.8,points=adjusted_points, labels=[1]*len(points))
+            # 使用 boxes 提示SAM
             results = sammodel(image, bboxes=adjusted_bbox)
             # 可视化VLM给出的points和bbox
             annotated_img = results[0].plot()

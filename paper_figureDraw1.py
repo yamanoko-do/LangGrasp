@@ -34,14 +34,14 @@ loaded_depth_optimized = cv2.imread(data_dir + "depth_optimized.png", cv2.IMREAD
 # show_image(loaded_color_rgb)
 show_image(loaded_depth_measure)
 show_image(loaded_depth_infer)
-#show_image(loaded_depth_optimized)
+show_image(loaded_depth_optimized)
 
-create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_measure)
-create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_optimized)
-loaded_mask = cv2.imread(data_dir + "mask.png")
-show_image(loaded_mask)
+# create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_measure)
+# create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_optimized)
+# loaded_mask = cv2.imread(data_dir + "mask.png")
+# show_image(loaded_mask)
 
-graspnet = get_net(checkpoint_path = config.graspnet_checkpoint_path)
+# graspnet = get_net(checkpoint_path = config.graspnet_checkpoint_path)
 
-for i in range(100):
-    target_graspgroup, cloud = get_grasp(graspnet, loaded_color_rgb, loaded_depth_optimized, loaded_mask, config.cam_info)
+# for i in range(100):
+#     target_graspgroup, cloud = get_grasp(graspnet, loaded_color_rgb, loaded_depth_optimized, loaded_mask, config.cam_info)
