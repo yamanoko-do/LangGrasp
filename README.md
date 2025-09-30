@@ -14,7 +14,7 @@ git lfs pull
 ```
 - 创建conda环境：
 ```
-cd Langrasp
+cd LangGrasp
 conda create -n LangGrasp python=3.10
 conda activate LangGrasp
 ```
