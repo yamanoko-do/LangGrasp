@@ -4,7 +4,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
 import numpy as np
-from langrasp.camera import CameraD435
+from langgrasp.camera import CameraD435
 
 @dataclass
 class Config:

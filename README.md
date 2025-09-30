@@ -1,23 +1,29 @@
 
-使用piper和d435执行抓取的存储库，此环境已经在cuda11.8+ubuntu20.04+python3.8进行了测试
+使用piper和d435执行抓取的存储库，此环境已经在以下环境进行了测试
+1. cuda11.8+ubuntu20.04+python3.8
+2. cuda12.1+ubuntu22.04+python3.10
 # 安装
 
-- 克隆存储库
+- 克隆存储库：
 ```
-git clone https://github.com/yamanoko-do/Langrasp.git --recurse-submodules
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/yamanoko-do/LangGrasp.git --recurse-submodules
 ```
-- 创建conda环境
+- 下载权重：
+```
+git lfs pull
+```
+- 创建conda环境：
 ```
 cd Langrasp
-conda create -n Langrasp python=3.8
-conda activate Langrasp
+conda create -n LangGrasp python=3.10
+conda activate LangGrasp
 ```
 ## 安装子模块
-按照子模块README.md说明安装：graspnet && piper_sdk && moge
+按照子模块README.md说明安装：[graspnet](https://github.com/yamanoko-do/graspnet) && [piper_sdk](https://github.com/agilexrobotics/piper_sdk) && [moge](https://github.com/microsoft/MoGe)
 ```bash
-cd langrasp/thirdpart/graspnet/
-cd langrasp/thirdpart/piper_sdk/
-cd langrasp/thirdpart/moge/
+cd langgrasp/thirdpart/graspnet/
+cd langgrasp/thirdpart/piper_sdk/
+cd langgrasp/thirdpart/moge/
 ```
 ### 修改moge
 
@@ -59,7 +65,7 @@ apt install iproute2
 bash ./scripts/find_all_can_port.sh
 bash ./scripts/can_activate.sh can_piper 1000000 "3-1.1:1.0"
 ```
-- 设置qwen2.5l的APIKEY:
+- 设置qwen2.5vl的APIKEY:
 ```bash
 export DASHSCOPE_API_KEY='YOUR_DASHSCOPE_API_KEY'
 ```

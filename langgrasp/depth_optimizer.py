@@ -417,7 +417,7 @@ def visualize_depth_comparison(color_rgb: np.ndarray, gt_depth: np.ndarray,
 if __name__ == "__main__":
     os.environ["XDG_SESSION_TYPE"] = "x11"
     # 数据路径
-    data_dir = "/root/host_share/langrasp/data/"
+    data_dir = "/root/host_share/LangGrasp/data/"
     
     # 相机内参
     intrinsic = np.array([
@@ -428,7 +428,7 @@ if __name__ == "__main__":
     
     # 读取图像数据
     print("读取图像数据...")
-    depth_gt = cv2.imread(data_dir + "depth.png", cv2.IMREAD_UNCHANGED).astype(np.float32)
+    depth_gt = cv2.imread(data_dir + "depth_measure.png", cv2.IMREAD_UNCHANGED).astype(np.float32)
     depth_pred = cv2.imread(data_dir + "depth_infer.png", cv2.IMREAD_UNCHANGED).astype(np.float32)
     
     color_bgr = cv2.imread(data_dir + "color.png")

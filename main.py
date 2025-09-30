@@ -6,14 +6,14 @@ import numpy as np
 import pyrealsense2 as rs
 import matplotlib.pyplot as plt
 from ultralytics import FastSAM, SAM
-from langrasp.config import Config
-from langrasp.camera import CameraD435
-from langrasp.piper_obj import PiperClass
-from langrasp.mask import get_target_mask,save_mask_as_image
-from langrasp.grasppose import get_grasp, get_net,vis_grasps
-from langrasp.utils import show_image, create_pointcloud_from_rgbd
-from langrasp.thirdpart.moge.moge.model.v2 import MoGeModel
-from langrasp.depth_optimizer import optimize_depth_map
+from langgrasp.config import Config
+from langgrasp.camera import CameraD435
+from langgrasp.piper_obj import PiperClass
+from langgrasp.mask import get_target_mask,save_mask_as_image
+from langgrasp.grasppose import get_grasp, get_net,vis_grasps
+from langgrasp.utils import show_image, create_pointcloud_from_rgbd
+from langgrasp.thirdpart.moge.moge.model.v2 import MoGeModel
+from langgrasp.depth_optimizer import optimize_depth_map
 
 
 def find_viable_grasps(graspnet, loaded_color_rgb, loaded_depth, loaded_mask, config, max_retries=5):
