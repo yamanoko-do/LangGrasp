@@ -153,17 +153,20 @@ def filter_grasps_by_mask(gg: GraspGroup, object_pc: np.ndarray, thresh=0.01):
             keep_ids.append(i)
     return gg[keep_ids]
 
-def get_grasp(net, scence_image,scence_depth, target_mask, cam_info):
+def get_grasp(net, scence_image,scence_depth,  cam_info, target_mask=None):
     """
     根据场景图像rgb,depth和目标mask返回最优抓取
     """
-    # 如果 mask 是 (H, W, 3) 的 numpy 数组
-    if target_mask.ndim == 3:
+    if target_mask is not None:
         # 常见的mask是黑白图，RGB三个通道值相同，取一个通道即可
-        target_mask = target_mask[:, :, 0]
+        if target_mask.ndim == 3: 
+            target_mask = target_mask[:, :, 0]
+        # 转成布尔数组（假设前景是 >0 的值）
+        target_mask = target_mask > 0
+    else:
+        h,w = scence_depth.shape
+        target_mask = np.ones((h,w), dtype=bool)
 
-    # 转成布尔数组（假设前景是 >0 的值）
-    target_mask = target_mask > 0
 
     collision_thresh = 0.01 #碰撞检测阈值，default0.01
     voxel_size = 0.01 #在碰撞检测前处理点云的体素大小，default0.01
@@ -174,7 +177,7 @@ def get_grasp(net, scence_image,scence_depth, target_mask, cam_info):
     if collision_thresh:
         gg = collision_detection(gg, np.array(cloud.points),collision_thresh, voxel_size)
     vis_grasps(gg = gg, cloud = cloud, view_num = 50, window_name = "all grasp poses")
-    gg = filter_grasps_by_mask(gg,object_pc,0.05)
+    gg = filter_grasps_by_mask(gg,object_pc,0.02)
     #vis_grasps(gg = gg, cloud = cloud, view_num = 1, window_name = "bestpose")
     #sortgg = gg.sort_by_score()
     return gg ,cloud

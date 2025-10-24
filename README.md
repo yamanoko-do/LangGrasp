@@ -1,30 +1,24 @@
 
-使用piper和d435执行抓取的存储库，此环境已经在以下环境进行了测试
-1. cuda11.8+ubuntu20.04+python3.8
-2. cuda12.1+ubuntu22.04+python3.10
+使用piper和d435执行抓取的存储库，此环境已经在cuda11.8+ubuntu20.04+python3.8进行了测试
 # 安装
-
-- 克隆存储库：
+- 克隆存储库
 ```
-GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/yamanoko-do/LangGrasp.git --recurse-submodules
+git clone https://github.com/yamanoko-do/Langrasp.git --recurse-submodules
 ```
-- 下载权重：
+- 创建conda环境
 ```
-git lfs pull
-```
-- 创建conda环境：
-```
-cd LangGrasp
-conda create -n LangGrasp python=3.10
-conda activate LangGrasp
+cd Langrasp
+conda create -n Langrasp python=3.8
+conda activate Langrasp
 ```
 ## 安装子模块
-按照子模块README.md说明安装：[graspnet](https://github.com/yamanoko-do/graspnet) && [piper_sdk](https://github.com/agilexrobotics/piper_sdk) && [moge](https://github.com/microsoft/MoGe)
+按照子模块README.md说明安装：graspnet && piper_sdk && moge
 ```bash
-cd langgrasp/thirdpart/graspnet/
-cd langgrasp/thirdpart/piper_sdk/
-cd langgrasp/thirdpart/moge/
+cd langrasp/thirdpart/graspnet/
+cd langrasp/thirdpart/piper_sdk/
+cd langrasp/thirdpart/moge/
 ```
+- [安装curobo](https://github.com/NVlabs/curobo)
 ### 修改moge
 
 - 修改/moge/utils/tools.py中line235的decorator为：
@@ -58,14 +52,14 @@ apt install iproute2
 ```
 
 # 使用
-- 首先执行标定，手眼标定&&工具坐标系标定代码见[d435_test](https://github.com/yamanoko-do/d435_test.git)，将结果写入langrasp/config.py
+- 首先执行标定，手眼标定&&工具坐标系标定代码见[RoboCam](https://github.com/yamanoko-do/RobotCam)，将结果写入langrasp/config.py
 - 连接piper:
 
 ```bash
 bash ./scripts/find_all_can_port.sh
-bash ./scripts/can_activate.sh can_piper 1000000 "3-1.1:1.0"
+bash ./scripts/can_activate.sh can_piper 1000000 "3-1.4:1.0"
 ```
-- 设置qwen2.5vl的APIKEY:
+- 设置qwen2.5l的APIKEY:
 ```bash
 export DASHSCOPE_API_KEY='YOUR_DASHSCOPE_API_KEY'
 ```
@@ -73,3 +67,5 @@ export DASHSCOPE_API_KEY='YOUR_DASHSCOPE_API_KEY'
 ```bash
 python main.py
 ```
+# else
+numpy 1.23.4

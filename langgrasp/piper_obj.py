@@ -8,15 +8,21 @@ import numpy as np
 import math
 import cv2
 
-
 class PiperClass():
-    def __init__(self,can_name = "can_piper"):
-        self.piper = C_PiperInterface_V2(can_name)
-        self.piper.ConnectPort()
-        while( not self.piper.EnablePiper()):#使能机械臂
-            time.sleep(0.01)
-        print("init: 成功连接到piper")
-        print(f"init: 当前机械臂状态：{self.piper.GetArmStatus().arm_status.ctrl_mode}")
+    def __init__(self,can_name = "can_piper", enable_curobo=False):
+        try:
+            self.piper = C_PiperInterface_V2(can_name)
+            self.piper.ConnectPort()
+            while(not self.piper.EnablePiper()):  # 使能机械臂
+                time.sleep(0.01)
+            print("init: 成功连接到piper")
+            print(f"init: 当前机械臂状态：{self.piper.GetArmStatus().arm_status.ctrl_mode}")
+        except ConnectionError as e:
+                print("init: 未连接到piper,请检查连接")
+
+        if enable_curobo:
+            from langrasp.curobokinematic import CuroboKinematic
+            self.curobokinematic_solver = CuroboKinematic(urdf_path="/root/host_share/curobo/piper.urdf")
 
     def control_gripper(self, length):
         """
@@ -24,12 +30,6 @@ class PiperClass():
         """
         # 限制输入范围在 0 ~ 70 mm
         length = max(0, min(length, 70))
-        while( not self.piper.EnablePiper()):
-            time.sleep(0.01)
-        self.piper.GripperCtrl(0,1000,0x02, 0)
-        self.piper.GripperCtrl(0,1000,0x01, 0)
-        while( not self.piper.EnablePiper()):
-            time.sleep(0.01)
         self.piper.GripperCtrl(0,1000,0x02, 0)
         self.piper.GripperCtrl(0,1000,0x01, 0)
         #转换到0.001mm
@@ -53,7 +53,6 @@ class PiperClass():
         self.piper.MotionCtrl_2(0x01, 0x01, 100, 0x00)
         self.piper.JointCtrl(joint_0, joint_1, joint_2, joint_3, joint_4, joint_5)
 
-        
     def getpose(self) -> dict:
         """
         获取机械臂末端位姿和关节角度,单位: mm和度
@@ -77,6 +76,7 @@ class PiperClass():
         断开机械臂连接
         """
         return self.piper.DisconnectPort()
+
     def disable(self):
         """
         失能机械臂 !!!注意，这会导致机械臂自由落体!!!
@@ -133,6 +133,26 @@ class PiperClass():
         self.piper.GripperCtrl(0,1000,0x02, 0)
         self.piper.GripperCtrl(0,1000,0x01, 0)
 
+    def inverse_kinematics(self, end_pose, initial_guess=None, max_iterations=100, tolerance=1e-4, method="cpu"):
+        if initial_guess is None:
+            initial_guess = [-0.091, 4.551, -41.699, -1.131, 64.722, -85.087]
+        if method == "cpu":
+            return PiperClass.inverse_kinematics_cpu(end_pose, initial_guess, max_iterations, tolerance)
+        elif method == "curobo":
+            # 使用curobo求解逆运动学
+            ik_result = self.curobokinematic_solver.solve_ik(end_pose, initial_guess, newton_iters=None)
+            if ik_result:
+                cal_pose = PiperClass.forward_kinematics_cpu(ik_result, format="euler")
+                trans_error = np.linalg.norm(np.array(cal_pose[:3]) - np.array(end_pose[:3]))
+                rot_error = np.linalg.norm(np.array(cal_pose[3:]) - np.array(end_pose[3:]))
+                # print(trans_error)
+                # print(rot_error)
+                return ik_result, trans_error, rot_error
+            else:
+                return None,None,None
+    
+        
+
     @staticmethod
     def get_dh_params():
         dh_params = [
@@ -166,8 +186,10 @@ class PiperClass():
             [0 ,      0,      0,    1]
         ])
     
+
+
     @staticmethod
-    def forward_kinematics(joint_angles, format = "matrix"):
+    def forward_kinematics_cpu(joint_angles, format = "matrix"):
         """
         参数:
         joint_angles : 长度为6的关节角度列表 单位为度
@@ -212,8 +234,9 @@ class PiperClass():
             rx, ry, rz = np.degrees([rx, ry, rz])
         return [x, y, z, rx, ry, rz]
 
+
     @staticmethod
-    def inverse_kinematics(end_pose, initial_guess=None, max_iterations=100, tolerance=1e-4):
+    def inverse_kinematics_cpu(end_pose, initial_guess=None, max_iterations=100, tolerance=1e-4):
         """
         使用 scipy.optimize.least_squares 的数值逆运动学
         - end_pose: [x, y, z, rx, ry, rz]   # 位置单位 mm，角度单位度
@@ -268,7 +291,7 @@ class PiperClass():
 
         # 定义误差函数 (内部全弧度)
         def pose_error_rad(joint_state_rad, target_pose):
-            T = PiperClass.forward_kinematics(np.degrees(joint_state_rad), format="matrix")
+            T = PiperClass.forward_kinematics_cpu(np.degrees(joint_state_rad), format="matrix")
             pose_curr = PiperClass.matrix_to_pose(T, format2deg=False)  # 输出 [x,y,z,rx,ry,rz] (rx,ry,rz in rad)
 
             res = np.array(pose_curr) - target_pose
@@ -292,7 +315,7 @@ class PiperClass():
             )
             if res.success:
                 q_sol = np.degrees(res.x)   # 返回角度
-                cal_pose = PiperClass.forward_kinematics(q_sol,format="euler")
+                cal_pose = PiperClass.forward_kinematics_cpu(q_sol,format="euler")
                 # print(f"计算关节角度:{q_sol.tolist()}") 
                 # print(f"计算关节位姿:{cal_pose}") 
                 # print(f"期望位姿:{end_pose}")
@@ -302,7 +325,7 @@ class PiperClass():
                 #q_sol = np.clip(q_sol, -180.0, 180.0)
                 return q_sol.tolist(),trans_err,rot_err
             else:
-                return None
+                return None,None,None
 
         except Exception as e:
             print(e)
@@ -356,19 +379,106 @@ if __name__ == "__main__":
     """
     获取机械臂位姿
     """
-    piper = PiperClass(can_name = "can_piper")
-    piper.set_ctrl_mode2can()
-    try:
-        while True:
-            pose_list = piper.getpose()
-            print(pose_list)
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n程序已被用户中断，正在退出...")
-    finally:
-        piper.disable()
-        # 这里可以添加一些资源释放或清理的代码
-        print("程序已退出")
+    # piper = PiperClass(can_name = "can_piper")
+    # piper.set_ctrl_mode2can()
+    # try:
+    #     while True:
+    #         pose_list = piper.getpose()
+    #         print(pose_list)
+    #         time.sleep(1)
+    # except KeyboardInterrupt:
+    #     print("\n程序已被用户中断，正在退出...")
+    # finally:
+    #     piper.disable()
+    #     # 这里可以添加一些资源释放或清理的代码
+    #     print("程序已退出")
+
+    """
+    正运动学
+    """
+    # piper = PiperClass(can_name = "can_piper", enable_curobo=True)
+    # joint_angles = [5.598, 6.135, -27.281, -9.023, 37.24, -92.193]
+    # ik_result = piper.forward_kinematics(joint_angles, format = "euler",method="cpu")
+    # print(f"method:cpu {ik_result}")
+    # ik_result = piper.forward_kinematics(joint_angles, format = "euler",method="curobo")
+    # print(f"method:curobo {ik_result}")
+    # num_trials = 100
+    # # 测试CPU方法
+    # cpu_times = []
+    # for _ in range(num_trials):
+    #     start_time = time.perf_counter()
+    #     piper.forward_kinematics(joint_angles, format="euler", method="cpu")
+    #     end_time = time.perf_counter()
+    #     cpu_times.append(end_time - start_time)
+
+    # cpu_avg_time = np.mean(cpu_times) * 1000  # 转换为毫秒
+    # cpu_std_time = np.std(cpu_times) * 1000    # 标准差，反映稳定性
+
+    # # 测试CUROBO方法
+    # curobo_times = []
+    # for i in range(100):#预热
+    #     piper.forward_kinematics(joint_angles, format="euler", method="curobo")
+    # for _ in range(num_trials):
+    #     start_time = time.perf_counter()
+    #     piper.forward_kinematics(joint_angles, format="euler", method="curobo")
+    #     end_time = time.perf_counter()
+    #     curobo_times.append(end_time - start_time)
+    
+    # curobo_avg_time = np.mean(curobo_times) * 1000
+    # curobo_std_time = np.std(curobo_times) * 1000
+
+    # # 输出结果
+    # print(f"CPU方法 - 平均耗时: {cpu_avg_time:.6f} ms, 标准差: {cpu_std_time:.6f} ms")
+    # print(f"CUROBO方法 - 平均耗时: {curobo_avg_time:.6f} ms, 标准差: {curobo_std_time:.6f} ms")
+
+
+    """
+    逆运动学
+    """
+    from tqdm import tqdm
+    # 初始化机械臂实例
+    piper = PiperClass(can_name="can_piper", enable_curobo=True)
+    end_pose = [26.236, -6.106, 295.177, -100.877, -10.247, -87.986]  # mm 和度
+    num_trials = 100  # 测试次数
+
+    # 输出两种方法的计算结果
+    ik_result = piper.inverse_kinematics(end_pose, method="cpu")
+    print(f"method:cpu {ik_result}")
+    ik_result = piper.inverse_kinematics(end_pose, method="curobo")
+    print(f"method:curobo {ik_result}")
+
+    # 测试CPU方法（带进度条）
+    cpu_times = []
+    print("测试CPU方法中...")
+    for _ in tqdm(range(num_trials), desc="CPU测试", unit="次"):
+        start_time = time.perf_counter()
+        piper.inverse_kinematics(end_pose, method="cpu")
+        end_time = time.perf_counter()
+        cpu_times.append(end_time - start_time)
+
+    cpu_avg_time = np.mean(cpu_times) * 1000  # 转换为毫秒
+    cpu_std_time = np.std(cpu_times) * 1000    # 标准差
+
+    # CUROBO方法预热（带进度条）
+    print("CUROBO方法预热中...")
+    for _ in tqdm(range(100), desc="预热", unit="次"):
+        piper.inverse_kinematics(end_pose, method="curobo")
+
+    # 测试CUROBO方法（带进度条）
+    curobo_times = []
+    print("测试CUROBO方法中...")
+    for _ in tqdm(range(num_trials), desc="CUROBO测试", unit="次"):
+        start_time = time.perf_counter()
+        piper.inverse_kinematics(end_pose, method="curobo")
+        end_time = time.perf_counter()
+        curobo_times.append(end_time - start_time)
+
+    curobo_avg_time = np.mean(curobo_times) * 1000
+    curobo_std_time = np.std(curobo_times) * 1000
+
+    # 输出结果
+    print(f"\nCPU方法 - 平均耗时: {cpu_avg_time:.6f} ms, 标准差: {cpu_std_time:.6f} ms")
+    print(f"CUROBO方法 - 平均耗时: {curobo_avg_time:.6f} ms, 标准差: {curobo_std_time:.6f} ms")
 
 
     # """
