@@ -1,9 +1,13 @@
 
 使用piper和d435执行抓取的存储库，此环境已经在cuda11.8+ubuntu20.04+python3.8进行了测试
 # 安装
-- 克隆存储库
+- 克隆存储库：
 ```
-git clone https://github.com/yamanoko-do/Langrasp.git --recurse-submodules
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/yamanoko-do/LangGrasp.git --recurse-submodules
+```
+- 下载权重：
+```
+git lfs pull
 ```
 - 创建conda环境
 ```
