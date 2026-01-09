@@ -160,7 +160,110 @@ class CameraD435:
 
         return out
 
-    
+    def get_kalman_depth(
+        self,
+        n: int = 50,
+        format2numpy: bool = True,
+        max_attempts: int = None,
+        q: float = 0.0,      # 过程噪声（越大越灵敏）
+        r: float = 50.0,     # 观测噪声（越大越平滑）
+        init_var: float = 1e6  # 初始不确定度
+    ) -> dict:
+        """
+        使用逐像素一维 Kalman Filter 融合多帧深度，减小波浪误差
+
+        参数:
+        n: 参与滤波的 depth 帧数
+        q: 过程噪声 Q
+        r: 观测噪声 R
+        init_var: 初始协方差（越大表示越不信任初始值）
+        """
+
+        if not self.depth_frame_enable:
+            raise RuntimeError("Depth stream is not enabled on this device/class.")
+
+        if max_attempts is None:
+            max_attempts = 10 * n
+
+        depth_est = None   # x_k
+        depth_var = None   # P_k
+        depth_dtype = None
+
+        color_sum = None
+        color_frames = 0
+        color_dtype = None
+
+        collected = 0
+        attempts = 0
+
+        while collected < n and attempts < max_attempts:
+            attempts += 1
+            frame_dict = self.get_frame(format2numpy=format2numpy)
+            if not frame_dict:
+                continue
+
+            # ---------- depth ----------
+            if "depth" in frame_dict and frame_dict["depth"] is not None:
+                depth = frame_dict["depth"]
+
+                if depth_est is None:
+                    depth_dtype = depth.dtype
+                    depth_est = depth.astype(np.float64)
+                    depth_var = np.full(depth.shape, init_var, dtype=np.float64)
+
+                valid = (depth != 0)
+                if np.any(valid):
+                    z = depth[valid].astype(np.float64)
+
+                    # 预测
+                    p_pred = depth_var[valid] + q
+
+                    # Kalman Gain
+                    k = p_pred / (p_pred + r)
+
+                    # 更新
+                    depth_est[valid] = depth_est[valid] + k * (z - depth_est[valid])
+                    depth_var[valid] = (1.0 - k) * p_pred
+
+                collected += 1
+
+            # ---------- color（简单平均） ----------
+            if "color" in frame_dict and frame_dict["color"] is not None:
+                color = frame_dict["color"]
+                if color_sum is None:
+                    color_dtype = color.dtype
+                    color_sum = np.zeros(color.shape, dtype=np.float64)
+                color_sum += color.astype(np.float64)
+                color_frames += 1
+
+        if collected < n:
+            raise RuntimeError(
+                f"只接收到 {collected} 帧 depth（目标 {n} 帧），达到最大尝试次数 {max_attempts}"
+            )
+
+        # ---------- depth 输出 ----------
+        if np.issubdtype(depth_dtype, np.integer):
+            depth_out = np.rint(depth_est)
+            info = np.iinfo(depth_dtype)
+            depth_out = np.clip(depth_out, info.min, info.max).astype(depth_dtype)
+        else:
+            depth_out = depth_est.astype(depth_dtype)
+
+        out = {"depth": depth_out}
+
+        # ---------- color 输出 ----------
+        if color_sum is not None and color_frames > 0:
+            avg_color = color_sum / color_frames
+            if np.issubdtype(color_dtype, np.integer):
+                avg_color = np.rint(avg_color)
+                info = np.iinfo(color_dtype)
+                avg_color = np.clip(avg_color, info.min, info.max).astype(color_dtype)
+            else:
+                avg_color = avg_color.astype(color_dtype)
+            out["color"] = avg_color
+
+        return out
+
     def get_point_and_color(self):
         """
         获取点和颜色,用于open3d渲染

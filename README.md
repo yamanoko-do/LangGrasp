@@ -18,9 +18,9 @@ conda activate Langrasp
 ## 安装子模块
 按照子模块README.md说明安装：graspnet && piper_sdk && moge
 ```bash
-cd langrasp/thirdpart/graspnet/
-cd langrasp/thirdpart/piper_sdk/
-cd langrasp/thirdpart/moge/
+cd langgrasp/thirdpart/graspnet/
+cd langgrasp/thirdpart/piper_sdk/
+cd langgrasp/thirdpart/moge/
 ```
 - [安装curobo](https://github.com/NVlabs/curobo)
 ### 修改moge
@@ -61,7 +61,7 @@ apt install iproute2
 
 ```bash
 bash ./scripts/find_all_can_port.sh
-bash ./scripts/can_activate.sh can_piper 1000000 "3-1.4:1.0"
+bash ./scripts/can_activate.sh can_piper 1000000 "3-1:1.0"
 ```
 - 设置qwen2.5l的APIKEY:
 ```bash

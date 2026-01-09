@@ -6,52 +6,46 @@ import open3d as o3d
 import matplotlib.pyplot as plt
 
 
-def show_image(image: np.ndarray, title: str = "Image", show_colorbar: bool = None, figsize=(6, 6)):
+def show_image(
+    image: np.ndarray,
+    title: str = "Image",
+    show_colorbar: bool = None,
+    figsize=(6, 6),
+    block: bool = True        
+):
     """
     自动判断图像类型（RGB 彩色图 or 单通道深度图）并可视化
-
-    参数:
-        image (np.ndarray): 输入图像数组
-            - 彩色图: (H, W, 3) 或 (H, W, 4)
-            - 深度图: (H, W) 或 (H, W, 1)
-        title (str): 图像标题
-        show_colorbar (bool): 是否显示 colorbar（深度图默认 True，彩色图默认 False）
-        figsize (tuple): 图像大小
-
-    示例:
-        visualize_image_auto(color_img)      # 自动识别为彩色图
-        visualize_image_auto(depth_img)      # 自动识别为深度图
     """
+
     if not isinstance(image, np.ndarray):
         raise TypeError("输入必须是 numpy.ndarray")
+
     print(f"图像形状: {image.shape}, 数据类型: {image.dtype}")
+
     # 处理 (H, W, 1) -> (H, W)
     if image.ndim == 3 and image.shape[2] == 1:
-        image = image.squeeze(-1)  # 变成 (H, W)
+        image = image.squeeze(-1)
 
-    # 判断图像类型
     is_color = (image.ndim == 3 and image.shape[2] in [3, 4])
     is_depth = (image.ndim == 2)
 
     if not (is_color or is_depth):
-        raise ValueError(f"不支持的图像形状: {image.shape}。仅支持 (H, W, 3/4) 彩色图 或 (H, W) 深度图。")
+        raise ValueError(f"不支持的图像形状: {image.shape}")
 
-    # 值域归一化处理（仅对彩色图需要，深度图 matplotlib 会自动映射）
     img_display = image.astype(np.float32)
     if is_color:
         if img_display.max() > 1.0:
-            img_display = img_display / 255.0
+            img_display /= 255.0
         img_display = np.clip(img_display, 0.0, 1.0)
 
-    # 设置默认 colorbar 行为
     if show_colorbar is None:
-        show_colorbar = is_depth  # 深度图默认显示 colorbar
+        show_colorbar = is_depth
 
-    # 绘图
     plt.figure(figsize=figsize)
+
     if is_color:
         plt.imshow(img_display)
-    else:  # 深度图
+    else:
         im = plt.imshow(img_display, cmap='jet')
         if show_colorbar:
             plt.colorbar(im, fraction=0.046, pad=0.04, label='Depth Value')
@@ -59,7 +53,12 @@ def show_image(image: np.ndarray, title: str = "Image", show_colorbar: bool = No
     plt.title(title)
     plt.axis('off')
     plt.tight_layout()
-    plt.show()
+
+    plt.show(block=block)
+
+    if not block:
+        plt.pause(0.001)  
+
 
 def create_pointcloud_from_rgbd(intrinsic, color_img, depth_img, mask_img=None,
                                 near=0.1, far=5.0, is_depth_buffer=False,

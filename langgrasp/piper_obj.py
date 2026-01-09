@@ -26,17 +26,38 @@ class PiperClass():
 
     def control_gripper(self, length):
         """
-        输入mm,范围0-70
+        输入 mm，范围 0-70
         """
-        # 限制输入范围在 0 ~ 70 mm
-        length = max(0, min(length, 70))
-        self.piper.GripperCtrl(0,1000,0x02, 0)
-        self.piper.GripperCtrl(0,1000,0x01, 0)
-        #转换到0.001mm
-        range = length* 1000
-        #四舍五入
-        range = round(range)
-        self.piper.GripperCtrl(abs(range), 1000, 0x01, 0)
+        # 限制输入范围在 0 ~ 69 mm
+        length = max(0, min(length, 69))
+
+        # 记录控制前的角度
+        msg_before = self.piper.GetArmGripperMsgs()
+        angle_before = msg_before.gripper_state.grippers_angle
+
+        # 使能夹爪
+        self.piper.GripperCtrl(0, 1000, 0x02, 0)
+        self.piper.GripperCtrl(0, 1000, 0x01, 0)
+
+        # 转换到 0.001 mm
+        target = round(length * 1000)
+
+        # 下发控制指令
+        self.piper.GripperCtrl(abs(target), 1000, 0x01, 0)
+
+        # 等待 2 秒
+        time.sleep(2)
+
+        # 再次读取角度
+        msg_after = self.piper.GetArmGripperMsgs()
+        angle_after = msg_after.gripper_state.grippers_angle
+
+        # 判断是否有变化
+        if angle_after == angle_before:
+            raise RuntimeError(
+                f"Gripper angle did not change after control command. "
+                f"angle_before={angle_before}, angle_after={angle_after}"
+            )
 
     def control_joint(self, joint_angle):
         """
@@ -50,7 +71,7 @@ class PiperClass():
         joint_3 = round(joint_angle[3]*factor)
         joint_4 = round(joint_angle[4]*factor)
         joint_5 = round(joint_angle[5]*factor)
-        self.piper.MotionCtrl_2(0x01, 0x01, 100, 0x00)
+        self.piper.MotionCtrl_2(0x01, 0x01, 25, 0x00)
         self.piper.JointCtrl(joint_0, joint_1, joint_2, joint_3, joint_4, joint_5)
 
     def getpose(self) -> dict:
@@ -105,7 +126,7 @@ class PiperClass():
             print(self.piper.GetArmStatus().arm_status.ctrl_mode)
         elif self.piper.GetArmStatus().arm_status.ctrl_mode == 0x02:#如果是示教模式
             print("尝试从 示教模式->can控制模式")
-            self.piper.MotionCtrl_1(0x02,0,0)#恢复，示教模式->待机模式(会恢复到别的模式吗？没有我可就写死了)
+            self.piper.MotionCtrl_1(0x02,0,0)#恢复，示教模式->待机模式
             # print(piper.GetArmStatus().arm_status.ctrl_mode)
             time.sleep(1)#这里必须要等切换到待机模式
             # print(piper.GetArmStatus().arm_status.ctrl_mode)
