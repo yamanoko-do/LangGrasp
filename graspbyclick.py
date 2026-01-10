@@ -172,7 +172,7 @@ def main():
         T_grasppose2base[:3, 3] = t_grasppose2base[:3, 0]
 
         leftright_offset = -20  # 夹爪开合方向的偏移修正系数,大于0夹爪向（标定板z负/向夹爪y负）方向移动
-        depth_offset = -45    # 越小抓的约深，如-20比-10更深,大于0夹爪向（标定板y负/向夹爪z负）方向移动
+        depth_offset = -55    # 越小抓的约深，如-20比-10更深,大于0夹爪向（标定板y负/向夹爪z负）方向移动
         updown_offset = 0    # 垂直夹爪开合方向的偏移修正系数,大于0夹爪向（标定板x负/向夹爪x负）方向移动
         #计算基座下法兰盘的接近位姿
         T_gripernear2board = config.T_griper2board.copy()
@@ -203,7 +203,7 @@ def main():
         total_error = near_trans_err + near_rot_err + grasp_trans_err + grasp_rot_err
         print(f"总误差: {total_error}")
         trans_ok = near_trans_err + grasp_trans_err < 0.3
-        rot_ok   = near_rot_err + grasp_rot_err < 30        
+        rot_ok   = near_rot_err + grasp_rot_err < 35        
         #允许角度的逆解轻微误差，但位置要准
         if trans_ok and rot_ok:
             print("找到合适的抓取点，执行抓取动作...")
@@ -215,7 +215,7 @@ def main():
             # 移动到抓取位置
             piper.control_joint(grasp_joint_angle)
             time.sleep(2)
-            piper.control_gripper(0)  # 闭合夹爪
+            piper.control_gripper(length=0, effort=0.5)  # 闭合夹爪
             time.sleep(3)
 
             # 抬起到初始位置

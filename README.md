@@ -56,7 +56,7 @@ apt install iproute2
 ```
 
 # 使用
-- 首先执行标定，手眼标定&&工具坐标系标定代码见[RoboCam](https://github.com/yamanoko-do/RobotCam)，将结果写入langrasp/config.py
+- 首先执行标定，手眼标定&&工具坐标系标定代码见[RoboCam](https://github.com/yamanoko-do/RobotCam)，将结果写入langgrasp/config.py
 - 连接piper:
 
 ```bash
