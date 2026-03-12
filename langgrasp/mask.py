@@ -55,7 +55,7 @@ def get_prediction_result_qwen(image, sammodel, scene_id, obj_id, text):
     2. 根据传入的实例化sammodel和points来生成mask
     3. 得到目标物体mask
     """
-    save_dir = "/root/host_share/langrasp/data"
+    save_dir = "/root/host_share/Langrasp/data"
     os.makedirs(save_dir, exist_ok=True)
 
     max_retries = 3  # 最大重试次数

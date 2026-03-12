@@ -42,7 +42,8 @@ def find_viable_grasps(piper, graspnet, loaded_color_rgb, loaded_depth, loaded_m
         print(f"抓取推理优化耗时: {grasp_et-grasp_st:.4f} 秒")
         
         # 分别用两种方法计算可达位姿
-        methods = ["curobo", "cpu"]
+        #methods = ["curobo", "cpu"]
+        methods = ["cpu"]
         method_results = {}
         
         for method in methods:
@@ -60,23 +61,35 @@ def find_viable_grasps(piper, graspnet, loaded_color_rgb, loaded_depth, loaded_m
                 T_grasppose2base = config.T_cam2base @ T_grasppose2cam
 
                 # 计算法兰盘的接近位姿
-                T_griper2F_near = config.T_board2F @ config.T_griper2board
-                T_F2base = T_grasppose2base @ np.linalg.inv(T_griper2F_near)
-                
+                leftright_offset = 90  
+                depth_offset = 0   
+                updown_offset = -30    
+                T_gripernear2board = config.T_griper2board.copy()
+                T_gripernear2board[1, 3] = T_gripernear2board[1, 3]+updown_offset
+                T_gripernear2board[0, 3] = T_gripernear2board[0, 3]+depth_offset+50
+                T_gripernear2board[2, 3] = T_gripernear2board[2, 3]+leftright_offset
+
+                T_gripernear2F = config.T_board2F @ T_gripernear2board
+                T_Fnear2base = T_grasppose2base @ np.linalg.inv(T_gripernear2F)   
+
                 # 计算接近位姿
-                Euler_F2base = PiperClass.matrix_to_pose(T_F2base, format2deg=True)
-                near_joint_angle, near_trans_err, near_rot_err = piper.inverse_kinematics(end_pose=Euler_F2base, method=method)
+                Euler_Fnear2base = PiperClass.matrix_to_pose(T_Fnear2base, format2deg=True)
+                near_joint_angle, near_trans_err, near_rot_err = piper.inverse_kinematics(end_pose=Euler_Fnear2base, method=method)
                 
                 # 计算法兰盘的抓取位姿
-                T_griper2board = config.T_griper2board.copy()
-                T_griper2board[1, 3] = -grasp.depth * 1000 * 1.91  # 系数越大抓的越深
-                T_griper2F_near = config.T_board2F @ T_griper2board
-                T_F2base = T_grasppose2base @ np.linalg.inv(T_griper2F_near)
+                
+                T_gripertarget2board = config.T_griper2board.copy()
+                T_gripertarget2board[1, 3] = T_gripertarget2board[1, 3]+updown_offset
+                T_gripertarget2board[0, 3] = T_gripertarget2board[0, 3]+depth_offset
+                T_gripertarget2board[2, 3] = T_gripertarget2board[2, 3]+leftright_offset
+
+                T_gripertarget2F = config.T_board2F @ T_gripertarget2board
+                T_Ftarget2base = T_grasppose2base @ np.linalg.inv(T_gripertarget2F)
 
                 # 计算抓取位姿
-                Euler_F2base = PiperClass.matrix_to_pose(T_F2base, format2deg=True)
+                Euler_Ftaget2base = PiperClass.matrix_to_pose(T_Ftarget2base, format2deg=True)
                 ik_st = time.time()
-                grasp_joint_angle, grasp_trans_err, grasp_rot_err = piper.inverse_kinematics(end_pose=Euler_F2base, method=method)
+                grasp_joint_angle, grasp_trans_err, grasp_rot_err = piper.inverse_kinematics(end_pose=Euler_Ftaget2base, method=method)
                 ik_et = time.time()
                 #print(f"ik耗时 ({method}): {ik_et-ik_st:.4f} 秒")
                 
@@ -123,7 +136,7 @@ def find_viable_grasps(piper, graspnet, loaded_color_rgb, loaded_depth, loaded_m
             sorted_near_joint_angles = [near_joint_angles[i] for i in sorted_indices]
             sorted_grasp_joint_angles = [grasp_joint_angles[i] for i in sorted_indices]
             
-            vis_grasps(gg=target_graspgroup[method_results["curobo"]['keep_ids']], cloud=cloud, window_name="viable_graspgroup_curobo")
+            #vis_grasps(gg=target_graspgroup[method_results["curobo"]['keep_ids']], cloud=cloud, window_name="viable_graspgroup_curobo")
             vis_grasps(gg=target_graspgroup[method_results["cpu"]['keep_ids']], cloud=cloud, window_name="viable_graspgroup_cpu")
             return sort_viable_graspgroup, sorted_near_joint_angles, sorted_grasp_joint_angles, cloud
         else:
@@ -149,48 +162,52 @@ def main():
         np.set_printoptions(precision=6, suppress=True)
 
     #初始化相机
-    # cam=CameraD435()
-    # cam.enable_stream(rs.stream.color, *config.cam_info["cam_rgb_hw"], rs.format.bgr8, 30)
-    # cam.enable_stream(rs.stream.depth, *config.cam_info["cam_depth_hw"], rs.format.z16, 30)
-    # cam.start()
-    # time.sleep(2)
+    cam=CameraD435()
+    cam.enable_stream(rs.stream.color, *config.cam_info["cam_rgb_hw"], rs.format.bgr8, 30)
+    cam.enable_stream(rs.stream.depth, *config.cam_info["cam_depth_hw"], rs.format.z16, 30)
+    cam.start()
+    time.sleep(2)
 
     # # 初始化piper
-    piper = PiperClass(can_name = "can_piper", enable_curobo=True)
-    # piper.set_ctrl_mode2can()
-    # print("移动预抓取点")
+    piper = PiperClass(can_name = "can_piper", enable_curobo=False)
+    piper.set_ctrl_mode2can()
+    print("移动预抓取点")
     
-    # piper.control_gripper(0)
-    # time.sleep(2)
-    # piper.control_gripper(70)
-    # time.sleep(2)
-    # piper.control_gripper(0)
-    # time.sleep(2)
+    piper.control_gripper(0)
+    time.sleep(2)
+    piper.control_gripper(70)
+    time.sleep(2)
+    piper.control_gripper(0)
+    time.sleep(2)
 
     # 初始化网络
     graspnet = get_net(checkpoint_path = config.graspnet_checkpoint_path)
-    #sammodel = SAM(config.sam_checkpoint_path)
-    #device = torch.device("cuda")
-    #moge_model = MoGeModel.from_pretrained(config.moge_checkpoint_path).to(device) 
+    sammodel = SAM(config.sam_checkpoint_path)
+    device = torch.device("cuda")
+    moge_model = MoGeModel.from_pretrained(config.moge_checkpoint_path).to(device) 
 
-    # 输入
-    #user_input = "Pliers"
-    #scence_dict = cam.get_average_depth(format2numpy=True, n = 100)
-    #img_rgb_array = scence_dict["color"]
-    #img_depth_array = scence_dict["depth"]
-    #save
-    #cv2.imwrite(data_dir+"color.png", img_rgb_array)
-    #cv2.imwrite(data_dir+"depth_measure.png", img_depth_array)
+    #输入
+    user_input = "Wrench with a ratchet mechanism"
+
+    # #111111111111111
+    # scence_dict = cam.get_average_depth(format2numpy=True, n = 100)
+    # img_rgb_array = scence_dict["color"]
+    # img_depth_array = scence_dict["depth"]
+    # #save
+    # cv2.imwrite(data_dir+"color.png", img_rgb_array)
+    # cv2.imwrite(data_dir+"depth_measure.png", img_depth_array)
+    # ### 111
 
     #load
     loaded_color_bgr = cv2.imread(data_dir + "color.png")
     loaded_color_rgb = cv2.cvtColor(loaded_color_bgr, cv2.COLOR_BGR2RGB)
-    #loaded_depth_measure = cv2.imread(data_dir + "depth_measure.png", cv2.IMREAD_ANYDEPTH) 
-    #show_image(loaded_color_rgb)
-    #show_image(loaded_depth_measure)
-    #create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_measure)
+    loaded_depth_measure = cv2.imread(data_dir + "depth_measure.png", cv2.IMREAD_ANYDEPTH) 
+    show_image(loaded_color_rgb)
+    show_image(loaded_depth_measure)
+    create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_measure)
 
-    #使用moge对深度图修正
+    # #222222222222222222
+    # #使用moge对深度图修正
     # moge_rgb_input = torch.tensor(loaded_color_rgb / 255, dtype=torch.float32, device=device).permute(2, 0, 1)  
     # moge_st = time.time() 
     # moge_output = moge_model.infer(moge_rgb_input)
@@ -203,20 +220,24 @@ def main():
     # depth_optimized = optimize_depth_map(loaded_depth_measure, loaded_depth_infer, loaded_color_rgb, config.cam_info["intrinsic"])
     # depth_optimized_et = time.time()
     # print(f"深度优化耗时: {depth_optimized_et-depth_optimized_st:.4f} 秒")
-
     # cv2.imwrite(data_dir+"depth_optimized.png", depth_optimized)
+    # #### 222
+
+
     loaded_depth_optimized = cv2.imread(data_dir + "depth_optimized.png", cv2.IMREAD_ANYDEPTH) 
-    #show_image(loaded_depth_optimized)
+    show_image(loaded_depth_optimized)
 
     #可视化修正的场景点云
     
-    #create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = depth_infer)
+    create_pointcloud_from_rgbd(intrinsic = config.cam_info["intrinsic"], color_img = loaded_color_rgb, depth_img = loaded_depth_optimized)
     
-    #获取分割
-    #targer_mask = get_target_mask(loaded_color_rgb,user_input,sammodel)
-    #save_mask_as_image(targer_mask,data_dir+"mask.png")
+    # #3333333333获取分割
+    # targer_mask = get_target_mask(loaded_color_rgb,user_input,sammodel)
+    # save_mask_as_image(targer_mask,data_dir+"mask.png")
+    # #33333
+
     loaded_mask = cv2.imread(data_dir + "mask.png")
-    #show_image(loaded_mask)
+    show_image(loaded_mask)
     #生成可行抓取姿态
     viable_graspgroup, near_joint_angle_list, grasp_joint_angle_list, cloud = find_viable_grasps(
         piper,
@@ -249,12 +270,18 @@ def main():
 
     vis_grasps(gg=best_grasp, cloud=cloud, view_num=1, window_name="bestgrasp")
 
+    # best_near_joint_angle = [-44.83004126234055, 138.1179031544921, -64.46352813874115, -85.26313044712313, -66.182785458356, 14.196957559098966]
+    # best_grasp_joint_angle = [-41.91564477071678, 129.26854786749607, -61.7402696294241, -85.36649881523692, -64.47969214462859, 20.8058154777586]
 
 
-    piper.control_joint([-0.675, 23.462, -63.198, 2.623, 72.915, 0.651])
-    time.sleep(3)
+
     print("移动到接近点")
     piper.control_gripper(70)
+
+    print(best_near_joint_angle)
+    print(best_grasp_joint_angle)
+    
+
     piper.control_joint(best_near_joint_angle)
     time.sleep(3)
     print("移动到抓取点")
@@ -266,20 +293,6 @@ def main():
 
     print("回到预抓取点")
     piper.control_joint([-0.675, 23.462, -63.198, 2.623, 72.915, 0.651])
-    #piper.control_joint([-1.0257399367606437, 67.22925267717845, -66.29589135109437, 2.506766289794974, 64.5593426076473, -1.9640179457439293])
-    time.sleep(2)
-
-    # # 抬起路径点1
-    # piper.control_joint([1.6789470513973734, 119.87612682338631, -82.0777912024451, -20.921370349870255, 31.802037307480244, 38.17365898204937])
-    # time.sleep(0.6)
-    # # 抬起路径点2
-    # piper.control_joint([-0.675, 56.035, -54.772, 3.18, 48.839, 5.661])
-    # time.sleep(0.6)
-    # # 抬起路径点3
-    # piper.control_joint([-0.675, 23.462, -63.198, 2.623, 72.915, 0.651])
-    # time.sleep(0.6)
-
-
 
 
     #关闭外设

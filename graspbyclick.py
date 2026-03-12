@@ -171,21 +171,23 @@ def main():
         T_grasppose2base[:3, :3] = R_grasppose2base
         T_grasppose2base[:3, 3] = t_grasppose2base[:3, 0]
 
-        leftright_offset = -20  # 夹爪开合方向的偏移修正系数,大于0夹爪向（标定板z负/向夹爪y负）方向移动
-        depth_offset = -55    # 越小抓的约深，如-20比-10更深,大于0夹爪向（标定板y负/向夹爪z负）方向移动
-        updown_offset = 0    # 垂直夹爪开合方向的偏移修正系数,大于0夹爪向（标定板x负/向夹爪x负）方向移动
+        leftright_offset = 90  # 夹爪开合方向的偏移修正系数,大于0夹爪向（标定板z负/向夹爪y负）方向移动
+        depth_offset = -30    # 越小抓的约深，如-20比-10更深,大于0夹爪向（标定板y负/向夹爪z负）方向移动
+        updown_offset = 35    # 垂直夹爪方向的偏移修正系数,大于0夹爪向（标定板x负/向夹爪x负）方向移动
         #计算基座下法兰盘的接近位姿
         T_gripernear2board = config.T_griper2board.copy()
-        T_gripernear2board[1, 3] = depth_offset+50
-        T_gripernear2board[2, 3] = leftright_offset
+        T_gripernear2board[0, 3] = T_gripernear2board[0, 3]+updown_offset
+        T_gripernear2board[1, 3] = T_gripernear2board[1, 3]+depth_offset+50
+        T_gripernear2board[2, 3] = T_gripernear2board[2, 3]+leftright_offset
 
         T_gripernear2F = config.T_board2F @ T_gripernear2board
         T_Fnear2base = T_grasppose2base @ np.linalg.inv(T_gripernear2F)
 
         #计算基座下法兰盘的抓取位姿
         T_gripertarget2board = config.T_griper2board.copy()
-        T_gripertarget2board[1, 3] = depth_offset
-        T_gripertarget2board[2, 3] = leftright_offset
+        T_gripertarget2board[0, 3] = T_gripertarget2board[0, 3]+updown_offset
+        T_gripertarget2board[1, 3] = T_gripertarget2board[1, 3]+depth_offset
+        T_gripertarget2board[2, 3] = T_gripertarget2board[2, 3]+leftright_offset
 
         T_gripertarget2F = config.T_board2F @ T_gripertarget2board
         T_Ftarget2base = T_grasppose2base @ np.linalg.inv(T_gripertarget2F)
@@ -215,7 +217,7 @@ def main():
             # 移动到抓取位置
             piper.control_joint(grasp_joint_angle)
             time.sleep(2)
-            piper.control_gripper(length=0, effort=0.5)  # 闭合夹爪
+            piper.control_gripper(length=0, effort=0.2)  # 闭合夹爪
             time.sleep(3)
 
             # 抬起到初始位置

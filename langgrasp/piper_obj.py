@@ -21,15 +21,19 @@ class PiperClass():
                 print("init: 未连接到piper,请检查连接")
 
         if enable_curobo:
-            from langrasp.curobokinematic import CuroboKinematic
-            self.curobokinematic_solver = CuroboKinematic(urdf_path="/root/host_share/curobo/piper.urdf")
+            from langgrasp.curobokinematic import CuroboKinematic
+            self.curobokinematic_solver = CuroboKinematic(urdf_path="/root/host_share/LangGrasp/data/piper_description.urdf")
 
-    def control_gripper(self, length):
+    def control_gripper(self, length,effort=5):
         """
-        输入 mm，范围 0-70
+        控制夹爪
+        Args:
+            length (float): 宽度,范围 0-70mm。
+            effort (float): 力度,范围 0-5N/m。
         """
-        # 限制输入范围在 0 ~ 69 mm
-        length = max(0, min(length, 69))
+        # 限制输入范围在 0 ~ 70 mm
+        length = max(0, min(length, 70))
+        effort = max(0, min(effort, 5))
 
         # 记录控制前的角度
         msg_before = self.piper.GetArmGripperMsgs()
@@ -40,10 +44,11 @@ class PiperClass():
         self.piper.GripperCtrl(0, 1000, 0x01, 0)
 
         # 转换到 0.001 mm
-        target = round(length * 1000)
+        length = round(length * 1000)
+        effort = round(effort * 1000)
 
         # 下发控制指令
-        self.piper.GripperCtrl(abs(target), 1000, 0x01, 0)
+        self.piper.GripperCtrl(abs(length), abs(effort), 0x01, 0)
 
         # 等待 2 秒
         time.sleep(2)

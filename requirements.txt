@@ -1,3 +1,4 @@
 pyrealsense2
 ultralytics
 openai
+open3d
